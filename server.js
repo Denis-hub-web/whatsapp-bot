@@ -14,12 +14,15 @@ const pino = require('pino');
 const QRCode = require('qrcode');
 const path = require('path');
 const fs = require('fs');
+const { MongoClient } = require('mongodb');
+const { useMongoDBAuthState } = require('./mongoAuthState');
 
 // ─── Config ────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3000;
 const AUTH_DIR = process.env.AUTH_DIR || './auth_info';
+const MONGODB_URI = process.env.MONGODB_URI;
 
-// Ensure auth directory exists
+// Ensure auth directory exists (fallback for local)
 if (!fs.existsSync(AUTH_DIR)) {
   fs.mkdirSync(AUTH_DIR, { recursive: true });
 }
@@ -74,9 +77,36 @@ let waSocket = null;
 // ─── WhatsApp Client ────────────────────────────────────────────────────────
 async function startWhatsApp() {
   const logger = pino({ level: 'silent' });
-
-  const { state, saveCreds } = await useMultiFileAuthState(AUTH_DIR);
   const { version } = await fetchLatestBaileysVersion();
+
+  let authMethod = 'file';
+  let state, saveCreds;
+
+  if (MONGODB_URI) {
+    try {
+      console.log('[MongoDB] Connecting to cluster...');
+      const client = new MongoClient(MONGODB_URI);
+      await client.connect();
+      const db = client.db('whatsapp_bot');
+      const collection = db.collection('auth_info');
+
+      const mongoAuth = await useMongoDBAuthState(collection);
+      state = mongoAuth.state;
+      saveCreds = mongoAuth.saveCreds;
+      authMethod = 'mongodb';
+      console.log('[MongoDB] ✅ Using MongoDB for session persistence');
+    } catch (err) {
+      console.error('[MongoDB] ❌ Connection failed, falling back to file system:', err);
+      const fileAuth = await useMultiFileAuthState(AUTH_DIR);
+      state = fileAuth.state;
+      saveCreds = fileAuth.saveCreds;
+    }
+  } else {
+    console.log('[WhatsApp] 📁 Using local file system for session persistence');
+    const fileAuth = await useMultiFileAuthState(AUTH_DIR);
+    state = fileAuth.state;
+    saveCreds = fileAuth.saveCreds;
+  }
 
   console.log(`[WhatsApp] Using Baileys version: ${version.join('.')}`);
 
