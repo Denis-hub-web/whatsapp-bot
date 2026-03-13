@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WhatsApp Bot — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --green:     #25D366;
+      --green-dim: #1a9e4a;
+      --text:      #e6edf3;
+      --muted:     #8b949e;
+      --error:     #f85149;
+      --radius:    16px;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* Animated background blobs */
+    body::before, body::after {
+      content: '';
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: .15;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      width: 500px; height: 500px;
+      background: var(--green);
+      top: -150px; left: -150px;
+      animation: blob1 8s ease-in-out infinite alternate;
+    }
+    body::after {
+      width: 400px; height: 400px;
+      background: #1d9bf0;
+      bottom: -120px; right: -120px;
+      animation: blob2 10s ease-in-out infinite alternate;
+    }
+    @keyframes blob1 { to { transform: translate(60px, 80px) scale(1.1); } }
+    @keyframes blob2 { to { transform: translate(-60px, -80px) scale(1.15); } }
+
+    .card {
+      position: relative; z-index: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 48px 40px;
+      max-width: 460px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 24px 80px rgba(0,0,0,.5);
+      backdrop-filter: blur(12px);
+    }
+
+    /* WhatsApp icon */
+    .wa-icon {
+      width: 64px; height: 64px;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      border-radius: 18px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 8px 24px rgba(37,211,102,.3);
+    }
+    .wa-icon svg { width: 36px; height: 36px; fill: #fff; }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: -.02em;
+    }
+    .subtitle {
+      color: var(--muted);
+      font-size: .9rem;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    /* Status badge */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: 6px 16px;
+      font-size: .82rem;
+      font-weight: 500;
+      margin-bottom: 32px;
+      transition: all .4s ease;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      transition: background .4s ease;
+    }
+    .status-badge.connecting .status-dot { background: #f0a500; animation: pulse 1.5s infinite; }
+    .status-badge.waiting    .status-dot { background: #1d9bf0; animation: pulse 1.5s infinite; }
+    .status-badge.success    .status-dot { background: var(--green); }
+    .status-badge.error      .status-dot { background: var(--error); }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1);   }
+      50%      { opacity:.5; transform:scale(1.4); }
+    }
+
+    /* QR area */
+    #qr-wrapper {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    #qr-wrapper.visible { display: flex; }
+
+    .qr-frame {
+      background: #fff;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 4px 32px rgba(0,0,0,.4);
+      display: inline-block;
+      transition: transform .3s ease, opacity .3s ease;
+    }
+    .qr-frame img {
+      width: 260px;
+      height: 260px;
+      display: block;
+      border-radius: 4px;
+    }
+    .qr-frame.pulse-in { animation: qrIn .4s ease; }
+    @keyframes qrIn {
+      from { opacity:0; transform:scale(.9) translateY(8px); }
+      to   { opacity:1; transform:scale(1)  translateY(0);   }
+    }
+
+    .qr-hint {
+      color: var(--muted);
+      font-size: .82rem;
+      line-height: 1.6;
+    }
+
+    /* Steps */
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+      text-align: left;
+    }
+    .step {
+      display: flex; align-items: flex-start; gap: 12px;
+      font-size: .82rem; color: var(--muted); line-height: 1.5;
+    }
+    .step-num {
+      background: rgba(37,211,102,.15);
+      color: var(--green);
+      border-radius: 50%;
+      width: 22px; height: 22px;
+      min-width: 22px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; font-weight: 700;
+    }
+
+    /* Loading spinner */
+    #loading-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+    }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 3px solid rgba(37,211,102,.15);
+      border-top: 3px solid var(--green);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-text { color: var(--muted); font-size: .88rem; }
+
+    /* Success state */
+    #success-wrapper {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      padding: 20px 0;
+    }
+    #success-wrapper.visible { display: flex; }
+    .check-circle {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, #25D366, #128C7E);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 8px 32px rgba(37,211,102,.35);
+      animation: bounceIn .5s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    @keyframes bounceIn {
+      0%   { transform: scale(0); opacity:0; }
+      60%  { transform: scale(1.15); opacity:1; }
+      100% { transform: scale(1); }
+    }
+    .check-circle svg { width: 36px; height: 36px; stroke: #fff; fill:none; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; }
+    .success-title { font-size: 1.15rem; font-weight: 700; color: var(--text); }
+    .success-sub   { font-size: .85rem; color: var(--muted); }
+
+    /* Footer */
+    .footer {
+      margin-top: 32px;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+      font-size: .75rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <!-- Icon -->
+    <div class="wa-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+      </svg>
+    </div>
+
+    <h1>WhatsApp Bot</h1>
+    <p class="subtitle">Scan the QR code below with your WhatsApp to connect the bot to your account</p>
+
+    <!-- Status badge -->
+    <div class="status-badge connecting" id="status-badge">
+      <span class="status-dot" id="status-dot"></span>
+      <span id="status-text">Connecting to server…</span>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading-wrapper">
+      <div class="spinner"></div>
+      <p class="loading-text" id="loading-text">Starting WhatsApp client…</p>
+    </div>
+
+    <!-- QR Code -->
+    <div id="qr-wrapper">
+      <div class="qr-frame" id="qr-frame">
+        <img id="qr-img" src="" alt="WhatsApp QR Code" />
+      </div>
+      <p class="qr-hint">Open WhatsApp → Linked Devices → Link a Device</p>
+      <div class="steps">
+        <div class="step"><span class="step-num">1</span><span>Open WhatsApp on your phone</span></div>
+        <div class="step"><span class="step-num">2</span><span>Tap Menu (⋮) → <strong>Linked Devices</strong></span></div>
+        <div class="step"><span class="step-num">3</span><span>Tap <strong>Link a Device</strong> and scan this QR code</span></div>
+      </div>
+    </div>
+
+    <!-- Success -->
+    <div id="success-wrapper">
+      <div class="check-circle">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <p class="success-title">Bot Connected!</p>
+      <p class="success-sub">Your WhatsApp bot is live and ready. Session has been saved — you won't need to scan again.</p>
+    </div>
+
+    <div class="footer">
+      Powered by <strong>Baileys</strong> · Session stored securely on server
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const statusBadge  = document.getElementById('status-badge');
+    const statusDot    = document.getElementById('status-dot');
+    const statusText   = document.getElementById('status-text');
+    const loadingWrap  = document.getElementById('loading-wrapper');
+    const loadingText  = document.getElementById('loading-text');
+    const qrWrapper    = document.getElementById('qr-wrapper');
+    const qrFrame      = document.getElementById('qr-frame');
+    const qrImg        = document.getElementById('qr-img');
+    const successWrap  = document.getElementById('success-wrapper');
+
+    function setStatus(cls, label) {
+      statusBadge.className = 'status-badge ' + cls;
+      statusText.textContent = label;
+    }
+
+    socket.on('connect', () => {
+      setStatus('connecting', 'Waiting for WhatsApp…');
+    });
+
+    socket.on('status', ({ status, message }) => {
+      if (status === 'waiting_qr') {
+        setStatus('waiting', 'Waiting for QR scan…');
+        loadingText.textContent = 'QR code ready — please scan it';
+      } else if (status === 'authenticated') {
+        setStatus('success', 'Bot is online ✅');
+      } else if (status === 'disconnected') {
+        setStatus('connecting', 'Reconnecting…');
+        successWrap.classList.remove('visible');
+        qrWrapper.classList.remove('visible');
+        loadingWrap.style.display = 'flex';
+      } else if (status === 'logged_out') {
+        setStatus('error', 'Logged out');
+        loadingText.textContent = 'Logged out. Reloading…';
+        setTimeout(() => location.reload(), 3000);
+      }
+    });
+
+    socket.on('qr', ({ qrImage }) => {
+      // Show QR, hide loading
+      loadingWrap.style.display = 'none';
+      successWrap.classList.remove('visible');
+      qrWrapper.classList.add('visible');
+
+      qrImg.src = qrImage;
+      qrFrame.classList.remove('pulse-in');
+      void qrFrame.offsetWidth; // reflow to restart animation
+      qrFrame.classList.add('pulse-in');
+
+      setStatus('waiting', 'Scan the QR code');
+    });
+
+    socket.on('authenticated', ({ message }) => {
+      // Hide QR, show success
+      qrWrapper.classList.remove('visible');
+      loadingWrap.style.display = 'none';
+      successWrap.classList.add('visible');
+      setStatus('success', 'Bot is online ✅');
+    });
+
+    socket.on('disconnect', () => {
+      setStatus('error', 'Disconnected from server');
+    });
+  </script>
+</body>
+</html>
