@@ -29,6 +29,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
@@ -37,6 +38,32 @@ app.get('/', (req, res) => {
 
 app.get('/status', (req, res) => {
   res.json({ status: botStatus });
+});
+
+// ─── API Endpoints ──────────────────────────────────────────────────────────
+app.post('/api/send', async (req, res) => {
+  const { phone, message } = req.body;
+
+  if (!phone || !message) {
+    return res.status(400).json({ error: 'Missing phone or message in request body' });
+  }
+
+  if (botStatus !== 'authenticated' || !waSocket) {
+    return res.status(503).json({ error: 'WhatsApp bot is not authenticated' });
+  }
+
+  try {
+    // Format phone number to JID (assuming user provides numbers like 1234567890)
+    // We append @s.whatsapp.net if not already present
+    const jid = phone.includes('@') ? phone : `${phone}@s.whatsapp.net`;
+
+    await waSocket.sendMessage(jid, { text: message });
+    console.log(`[API] Message sent to ${jid}`);
+    res.json({ success: true, message: 'Message sent successfully' });
+  } catch (err) {
+    console.error('[API] Error sending message:', err);
+    res.status(500).json({ error: 'Failed to send message', details: err.message });
+  }
 });
 
 // ─── State ─────────────────────────────────────────────────────────────────
