@@ -21,6 +21,7 @@ const { useMongoDBAuthState } = require('./mongoAuthState');
 const PORT = process.env.PORT || 3000;
 const AUTH_DIR = process.env.AUTH_DIR || './auth_info';
 const MONGODB_URI = process.env.MONGODB_URI;
+const API_KEY = process.env.API_KEY;
 
 // Ensure auth directory exists (fallback for local)
 if (!fs.existsSync(AUTH_DIR)) {
@@ -46,6 +47,12 @@ app.get('/status', (req, res) => {
 // ─── API Endpoints ──────────────────────────────────────────────────────────
 app.post('/api/send', async (req, res) => {
   const { phone, message } = req.body;
+  const apiKey = req.headers['x-api-key'];
+
+  // Security check: if API_KEY is set in environment, require it in headers
+  if (API_KEY && apiKey !== API_KEY) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or missing API Key' });
+  }
 
   if (!phone || !message) {
     return res.status(400).json({ error: 'Missing phone or message in request body' });

@@ -6,22 +6,25 @@ const { BufferJSON } = require('@whiskeysockets/baileys');
  * @param {import('mongodb').Collection} collection 
  */
 async function useMongoDBAuthState(collection) {
-    const writeData = (data, id) => {
-        return collection.replaceOne(
-            { _id: id },
-            JSON.parse(JSON.stringify(data, BufferJSON.replacer)),
-            { upsert: true }
-        );
+    const writeData = async (data, id) => {
+        try {
+            const information = JSON.parse(JSON.stringify(data, BufferJSON.replacer));
+            await collection.replaceOne({ _id: id }, information, { upsert: true });
+            if (id === 'creds') console.log(`[MongoDB] Successfully saved ${id}`);
+        } catch (error) {
+            console.error(`[MongoDB] Error writing ${id}:`, error);
+        }
     };
 
     const readData = async (id) => {
         try {
             const data = await collection.findOne({ _id: id });
             if (data) {
+                if (id === 'creds') console.log(`[MongoDB] Successfully restored ${id}`);
                 return JSON.parse(JSON.stringify(data), BufferJSON.reviver);
             }
         } catch (error) {
-            console.error(`Error reading ${id} from MongoDB:`, error);
+            console.error(`[MongoDB] Error reading ${id}:`, error);
         }
         return null;
     };
@@ -29,8 +32,9 @@ async function useMongoDBAuthState(collection) {
     const removeData = async (id) => {
         try {
             await collection.deleteOne({ _id: id });
+            console.log(`[MongoDB] Removed ${id}`);
         } catch (error) {
-            console.error(`Error removing ${id} from MongoDB:`, error);
+            console.error(`[MongoDB] Error removing ${id}:`, error);
         }
     };
 
