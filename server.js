@@ -200,58 +200,9 @@ async function startWhatsApp() {
       console.log(`[Message] From: ${from} — "${body}"`);
 
       // ── Bot Logic ──────────────────────────────────────────────────────────
-      await handleMessage(sock, from, body, msg);
+      // Auto-reply disabled to focus on API notifications.
+      // await handleMessage(sock, from, body, msg);
     }
-  });
-}
-
-// ─── Bot Logic ──────────────────────────────────────────────────────────────
-async function handleMessage(sock, from, body, rawMsg) {
-  const text = body.trim().toLowerCase();
-
-  try {
-    // Typing indicator
-    await sock.sendPresenceUpdate('composing', from);
-
-    // ── Commands ─────────────────────────────────────────────────────────────
-    if (text === '!ping') {
-      await sendReply(sock, from, rawMsg, '🏓 Pong! Bot is alive.');
-
-    } else if (text === '!help') {
-      const helpText = `🤖 *WhatsApp Bot Commands*\n\n` +
-        `!ping — Check if bot is online\n` +
-        `!help — Show this menu\n` +
-        `!time — Get current server time\n` +
-        `!echo <text> — Bot repeats your message\n` +
-        `\n_Send any message and the bot will echo it back._`;
-      await sendReply(sock, from, rawMsg, helpText);
-
-    } else if (text === '!time') {
-      const now = new Date().toLocaleString('en-US', { timeZone: 'UTC' });
-      await sendReply(sock, from, rawMsg, `🕐 Server time (UTC): ${now}`);
-
-    } else if (text.startsWith('!echo ')) {
-      const echoText = body.slice(6).trim();
-      await sendReply(sock, from, rawMsg, `🔁 ${echoText}`);
-
-    } else {
-      // Default: echo back
-      await sendReply(sock, from, rawMsg, `You said: "${body}"\n\n_Type !help for commands._`);
-    }
-
-    // Stop typing indicator
-    await sock.sendPresenceUpdate('paused', from);
-
-  } catch (err) {
-    console.error('[Bot] Error sending message:', err);
-  }
-}
-
-// ─── Send a quoted reply ─────────────────────────────────────────────────────
-async function sendReply(sock, to, quotedMsg, text) {
-  await sock.sendMessage(to, {
-    text,
-    quoted: quotedMsg,
   });
 }
 
